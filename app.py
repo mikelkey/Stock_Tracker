@@ -19,12 +19,6 @@ def send_pushover_alert(message):
     }
     requests.post(url, data=payload)
 
-# Function to fetch stock data
-def get_stock_data(ticker):
-    stock = yf.Ticker(ticker)
-    hist = stock.history(period='1d', interval='1m')
-    return hist
-
 # Function to check for drop alert
 def check_drop_alert(tickers, threshold):
     alerts = []
@@ -60,8 +54,11 @@ def detect_pattern(tickers, period, threshold):
 # Streamlit UI
 st.title('Stock Tracker and Drop Alert')
 
+# Default list of top 100 stocks
+default_tickers = "AAPL, MSFT, NVDA, AMZN, GOOGL, GOOG, BRK.B, META, TSLA, UNH, XOM, JNJ, V, WMT, LLY, JPM, MA, PG, HD, CVX, MRK, PEP, ABBV, KO, COST, AVGO, MCD, TSM, ORCL, PFE, CRM, NVO, ACN, ABT, SHEL, LIN, AMD, DHR, CMCSA, NKE, MDT, BAC, WFC, T, DIS, BABA, VZ, TXN, SCHW, UPS, PM, BMY, RTX, IBM, QCOM, MS, HON, AMGN, TMUS, UNP, SNY, LOW, SPY, CAT, AZN, CVS, GILD, SBUX, MMM, GE, BLK, INTU, AMT, ISRG, TMO, BKNG, NOW, DE, C, LMT, ADP, ELV, MDLZ, SYK, PGR, CB, ZTS, USB, PLD, CI, EQIX, MMC, MO, NOC, HDB, ADBE, GS, ADI, MUFG, SONY, HCA"
+
 # User input for stock tickers
-tickers = st.text_area('Enter Stock Tickers (comma-separated, e.g., AAPL, TSLA, MSFT):', 'AAPL, TSLA').upper().split(',')
+tickers = st.text_area('Enter Stock Tickers (comma-separated, e.g., AAPL, TSLA, MSFT):', default_tickers).upper().split(',')
 
 tickers = [ticker.strip() for ticker in tickers]
 
@@ -70,11 +67,6 @@ threshold = st.number_input('Enter Drop Threshold Percentage:', min_value=1.0, m
 
 if st.button('Track Stocks'):
     with st.spinner('Fetching data...'):
-        for ticker in tickers:
-            stock_data = get_stock_data(ticker)
-            st.write(f'Latest Data for {ticker}:')
-            st.dataframe(stock_data.tail(10))
-        
         alert_messages = check_drop_alert(tickers, threshold)
         if alert_messages:
             for msg in alert_messages:
