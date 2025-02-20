@@ -42,6 +42,22 @@ def send_consolidated_alerts(tickers, threshold):
         consolidated_message = "\n".join(alert_messages)
         send_pushover_alert(consolidated_message)
 
+# Function to detect patterns in stock data
+def detect_pattern(tickers, period, predict_threshold):
+    prediction_messages = []
+    for ticker in tickers:
+        stock = yf.Ticker(ticker)
+        hist = stock.history(period=period)
+        if len(hist) > 1:
+            change_percentage = ((hist['Close'].iloc[-1] - hist['Close'].iloc[0]) / hist['Close'].iloc[0]) * 100
+            if abs(change_percentage) >= predict_threshold:
+                direction = "increased" if change_percentage > 0 else "decreased"
+                prediction_message = f'{ticker} has {direction} by {change_percentage:.2f}% over the period {period}.'
+                prediction_messages.append(prediction_message)
+    return prediction_messages
+
+# Add this function definition before the line using detect_pattern function
+
 # Streamlit UI
 st.title('Stock Tracker and Drop Alert')
 
