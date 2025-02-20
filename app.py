@@ -2,11 +2,12 @@ import streamlit as st
 import yfinance as yf
 import pandas as pd
 import time
+import os
 from pushbullet import Pushbullet
 
 # Set up Pushbullet API key (replace with your API key)
 PB_API_KEY = 'o.V35eP0iIExlfDb3nFZcSYQIA5d9DVhJd'
-pb = Pushbullet(PB_API_KEY)
+PB_API_KEY = st.secrets["PB_API_KEY"]
 
 # Function to fetch stock data
 def get_stock_data(ticker):
@@ -90,3 +91,4 @@ while True:
     if alert_messages:
         for msg in alert_messages:
             st.error(msg)
+
