@@ -4,6 +4,7 @@ import pandas as pd
 import time
 import os
 import requests
+import schedule
 
 # Set up Pushover API (replace with your credentials or store in Streamlit Secrets)
 PUSHOVER_API_TOKEN = st.secrets["PUSHOVER_API_TOKEN"]
@@ -23,7 +24,7 @@ def send_pushover_alert(message):
 def check_drop_alert(tickers, threshold):
     alerts = []
     for ticker in tickers:
-        stock = yf.Ticker(ticker)
+        stock = yf.TTicker(ticker)
         hist = stock.history(period='2d')
         if len(hist) >= 2:
             prev_close = hist['Close'].iloc[-2]
@@ -31,31 +32,21 @@ def check_drop_alert(tickers, threshold):
             drop_percentage = ((prev_close - curr_close) / prev_close) * 100
             if drop_percentage >= threshold:
                 alert_message = f'ALERT: {ticker} has dropped {drop_percentage:.2f}% today!'
-                send_pushover_alert(alert_message)
                 alerts.append(alert_message)
     return alerts
 
-# Function for pattern detection
-def detect_pattern(tickers, period, threshold):
-    predictions = []
-    for ticker in tickers:
-        stock = yf.Ticker(ticker)
-        hist = stock.history(period=period)
-        hist['Returns'] = hist['Close'].pct_change() * 100
-        predicted_change = hist['Returns'].mean()
-        
-        if abs(predicted_change) >= threshold:
-            direction = 'rise' if predicted_change > 0 else 'fall'
-            prediction_message = f'Prediction: {ticker} is likely to {direction} by more than {threshold}% over the next {period}.'
-            send_pushover_alert(prediction_message)
-            predictions.append(prediction_message)
-    return predictions
+# Function to send consolidated alerts
+def send_consolidated_alerts(tickers, threshold):
+    alert_messages = check_drop_alert(tickers, threshold)
+    if alert_messages:
+        consolidated_message = "\n".join(alert_messages)
+        send_pushover_alert(consolidated_message)
 
 # Streamlit UI
 st.title('Stock Tracker and Drop Alert')
 
 # Default list of top 100 stocks
-default_tickers = "AAPL, MSFT, NVDA, AMZN, GOOGL, GOOG, BRK.B, META, TSLA, UNH, XOM, JNJ, V, WMT, LLY, JPM, MA, PG, HD, CVX, MRK, PEP, ABBV, KO, COST, AVGO, MCD, TSM, ORCL, PFE, CRM, NVO, ACN, ABT, SHEL, LIN, AMD, DHR, CMCSA, NKE, MDT, BAC, WFC, T, DIS, BABA, VZ, TXN, SCHW, UPS, PM, BMY, RTX, IBM, QCOM, MS, HON, AMGN, TMUS, UNP, SNY, LOW, SPY, CAT, AZN, CVS, GILD, SBUX, MMM, GE, BLK, INTU, AMT, ISRG, TMO, BKNG, NOW, DE, C, LMT, ADP, ELV, MDLZ, SYK, PGR, CB, ZTS, USB, PLD, CI, EQIX, MMC, MO, NOC, HDB, ADBE, GS, ADI, MUFG, SONY, HCA"
+default_tickers = "AAPL, MSFT, NVDA, AMZN, GOOGL, GOOG, BRK.B, META, TSLA, UNH, XOM, JNJ, V, WMT, LLY, JPM, MA, PG, HD, CVX, MRK, PEP, ABBV, KO, COST, AVGO, MCD, TSM, ORCL, PFE, CRM, NVO, ACN, ABT, SH...
 
 # User input for stock tickers
 tickers = st.text_area('Enter Stock Tickers (comma-separated, e.g., AAPL, TSLA, MSFT):', default_tickers).upper().split(',')
@@ -85,11 +76,9 @@ if st.button('Predict Stock Movements'):
         for msg in prediction_messages:
             st.write(msg)
 
-# Auto-refresh every 60 seconds
-REFRESH_INTERVAL = 60
+# Schedule the task every 30 minutes
+schedule.every(30).minutes.do(send_consolidated_alerts, tickers=tickers, threshold=threshold)
+
 while True:
-    time.sleep(REFRESH_INTERVAL)
-    alert_messages = check_drop_alert(tickers, threshold)
-    if alert_messages:
-        for msg in alert_messages:
-            st.error(msg)
+    schedule.run_pending()
+    time.sleep(1)
