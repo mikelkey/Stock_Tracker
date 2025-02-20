@@ -24,7 +24,7 @@ def send_pushover_alert(message):
 def check_drop_alert(tickers, threshold):
     alerts = []
     for ticker in tickers:
-        stock = yf.TTicker(ticker)
+        stock = yf.Ticker(ticker)
         hist = stock.history(period='2d')
         if len(hist) >= 2:
             prev_close = hist['Close'].iloc[-2]
