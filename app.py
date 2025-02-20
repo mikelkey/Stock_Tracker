@@ -3,17 +3,29 @@ import yfinance as yf
 import pandas as pd
 import time
 import os
-from pushbullet import Pushbullet
+from twilio.rest import Client
 
-# Set up Pushbullet API key (replace with your API key)
-PB_API_KEY = 'o.V35eP0iIExlfDb3nFZcSYQIA5d9DVhJd'
-PB_API_KEY = st.secrets["PB_API_KEY"]
+# Set up Twilio API (replace with your credentials or store in Streamlit Secrets)
+TWILIO_ACCOUNT_SID = st.secrets["TWILIO_ACCOUNT_SID"]
+TWILIO_AUTH_TOKEN = st.secrets["TWILIO_AUTH_TOKEN"]
+TWILIO_PHONE_NUMBER = st.secrets["TWILIO_PHONE_NUMBER"]
+USER_PHONE_NUMBER = st.secrets["USER_PHONE_NUMBER"]
+
+client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
 
 # Function to fetch stock data
 def get_stock_data(ticker):
     stock = yf.Ticker(ticker)
     hist = stock.history(period='1d', interval='1m')
     return hist
+
+# Function to send SMS alerts
+def send_sms_alert(message):
+    client.messages.create(
+        body=message,
+        from_=TWILIO_PHONE_NUMBER,
+        to=USER_PHONE_NUMBER
+    )
 
 # Function to check for drop alert
 def check_drop_alert(tickers, threshold):
@@ -27,7 +39,7 @@ def check_drop_alert(tickers, threshold):
             drop_percentage = ((prev_close - curr_close) / prev_close) * 100
             if drop_percentage >= threshold:
                 alert_message = f'ALERT: {ticker} has dropped {drop_percentage:.2f}% today!'
-                pb.push_note("Stock Alert", alert_message)
+                send_sms_alert(alert_message)
                 alerts.append(alert_message)
     return alerts
 
@@ -43,7 +55,7 @@ def detect_pattern(tickers, period, threshold):
         if abs(predicted_change) >= threshold:
             direction = 'rise' if predicted_change > 0 else 'fall'
             prediction_message = f'Prediction: {ticker} is likely to {direction} by more than {threshold}% over the next {period}.'
-            pb.push_note("Stock Prediction", prediction_message)
+            send_sms_alert(prediction_message)
             predictions.append(prediction_message)
     return predictions
 
@@ -91,4 +103,3 @@ while True:
     if alert_messages:
         for msg in alert_messages:
             st.error(msg)
-
