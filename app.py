@@ -3,29 +3,27 @@ import yfinance as yf
 import pandas as pd
 import time
 import os
-from twilio.rest import Client
+import requests
 
-# Set up Twilio API (replace with your credentials or store in Streamlit Secrets)
-TWILIO_ACCOUNT_SID = st.secrets["TWILIO_ACCOUNT_SID"]
-TWILIO_AUTH_TOKEN = st.secrets["TWILIO_AUTH_TOKEN"]
-TWILIO_PHONE_NUMBER = st.secrets["TWILIO_PHONE_NUMBER"]
-USER_PHONE_NUMBER = st.secrets["USER_PHONE_NUMBER"]
+# Set up Pushover API (replace with your credentials or store in Streamlit Secrets)
+PUSHOVER_API_TOKEN = st.secrets["PUSHOVER_API_TOKEN"]
+PUSHOVER_USER_KEY = st.secrets["PUSHOVER_USER_KEY"]
 
-client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+# Function to send Pushover alerts
+def send_pushover_alert(message):
+    url = "https://api.pushover.net/1/messages.json"
+    payload = {
+        "token": PUSHOVER_API_TOKEN,
+        "user": PUSHOVER_USER_KEY,
+        "message": message
+    }
+    requests.post(url, data=payload)
 
 # Function to fetch stock data
 def get_stock_data(ticker):
     stock = yf.Ticker(ticker)
     hist = stock.history(period='1d', interval='1m')
     return hist
-
-# Function to send SMS alerts
-def send_sms_alert(message):
-    client.messages.create(
-        body=message,
-        from_=TWILIO_PHONE_NUMBER,
-        to=USER_PHONE_NUMBER
-    )
 
 # Function to check for drop alert
 def check_drop_alert(tickers, threshold):
@@ -39,7 +37,7 @@ def check_drop_alert(tickers, threshold):
             drop_percentage = ((prev_close - curr_close) / prev_close) * 100
             if drop_percentage >= threshold:
                 alert_message = f'ALERT: {ticker} has dropped {drop_percentage:.2f}% today!'
-                send_sms_alert(alert_message)
+                send_pushover_alert(alert_message)
                 alerts.append(alert_message)
     return alerts
 
@@ -55,7 +53,7 @@ def detect_pattern(tickers, period, threshold):
         if abs(predicted_change) >= threshold:
             direction = 'rise' if predicted_change > 0 else 'fall'
             prediction_message = f'Prediction: {ticker} is likely to {direction} by more than {threshold}% over the next {period}.'
-            send_sms_alert(prediction_message)
+            send_pushover_alert(prediction_message)
             predictions.append(prediction_message)
     return predictions
 
