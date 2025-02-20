@@ -5,6 +5,7 @@ import time
 import os
 import requests
 import schedule
+from datetime import datetime
 
 # Set up Pushover API (replace with your credentials or store in Streamlit Secrets)
 PUSHOVER_API_TOKEN = st.secrets["PUSHOVER_API_TOKEN"]
@@ -37,10 +38,12 @@ def check_drop_alert(tickers, threshold):
 
 # Function to send consolidated alerts
 def send_consolidated_alerts(tickers, threshold):
-    alert_messages = check_drop_alert(tickers, threshold)
-    if alert_messages:
-        consolidated_message = "\n".join(alert_messages)
-        send_pushover_alert(consolidated_message)
+    current_time = datetime.now().time()
+    if current_time >= datetime.strptime("08:00", "%H:%M").time() and current_time <= datetime.strptime("16:00", "%H:%M").time():
+        alert_messages = check_drop_alert(tickers, threshold)
+        if alert_messages:
+            consolidated_message = "\n".join(alert_messages)
+            send_pushover_alert(consolidated_message)
 
 # Function to detect patterns in stock data
 def detect_pattern(tickers, period, predict_threshold):
@@ -56,13 +59,11 @@ def detect_pattern(tickers, period, predict_threshold):
                 prediction_messages.append(prediction_message)
     return prediction_messages
 
-# Add this function definition before the line using detect_pattern function
-
 # Streamlit UI
 st.title('Stock Tracker and Drop Alert')
 
 # Default list of top 100 stocks
-default_tickers = "AAPL, MSFT, NVDA, AMZN, GOOGL, GOOG, BRK.B, META, TSLA, UNH, XOM, JNJ, V, WMT, LLY, JPM, MA, PG, HD, CVX, MRK, PEP,ABBV, KO, COST, AVGO, MCD, TSM, ORCL, PFE, CRM, NVO, ACN, ABT"
+default_tickers = "AAPL, MSFT, NVDA, AMZN, GOOGL, GOOG, BRK.B, META, TSLA, UNH, XOM, JNJ, V, WMT, LLY, JPM, MA, PG, HD, CVX, MRK, PEP, ABBV, KO, COST, AVGO, MCD, TSM, ORCL, PFE, CRM, NVO, ACN, ABT"
 
 # User input for stock tickers
 tickers = st.text_area('Enter Stock Tickers (comma-separated, e.g., AAPL, TSLA, MSFT):', default_tickers).upper().split(',')
@@ -92,8 +93,31 @@ if st.button('Predict Stock Movements'):
         for msg in prediction_messages:
             st.write(msg)
 
-# Schedule the task every 30 minutes
+# Schedule the task every 30 minutes within the specified hours
 schedule.every(30).minutes.do(send_consolidated_alerts, tickers=tickers, threshold=threshold)
+
+# Schedule start and stop times
+def start_app():
+    while True:
+        schedule.run_pending()
+        time.sleep(1)
+
+def stop_app():
+    os._exit(0)
+
+# Start the app at 8am CT (14:00 UTC) Monday to Friday
+schedule.every().monday.at("14:00").do(start_app)
+schedule.every().tuesday.at("14:00").do(start_app)
+schedule.every().wednesday.at("14:00").do(start_app)
+schedule.every().thursday.at("14:00").do(start_app)
+schedule.every().friday.at("14:00").do(start_app)
+
+# Stop the app at 4pm CT (22:00 UTC) Monday to Friday
+schedule.every().monday.at("23:00").do(stop_app)
+schedule.every().tuesday.at("23:00").do(stop_app)
+schedule.every().wednesday.at("23:00").do(stop_app)
+schedule.every().thursday.at("23:00").do(stop_app)
+schedule.every().friday.at("23:00").do(stop_app)
 
 while True:
     schedule.run_pending()
