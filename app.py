@@ -5,8 +5,8 @@ import time
 from pushbullet import Pushbullet
 
 # Set up Pushbullet API key (replace with your API key)
-PB_API_KEY = 'your_pushbullet_api_key'
-pb = Pushbullet(PB_API_KEY)
+# PB_API_KEY = 'your_pushbullet_api_key'
+# pb = Pushbullet(PB_API_KEY)
 
 # Function to fetch stock data
 def get_stock_data(ticker):
